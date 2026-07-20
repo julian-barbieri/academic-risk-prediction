@@ -731,4 +731,21 @@ safeAlterTable("ALTER TABLE examenes ADD COLUMN cuatrimestre INTEGER DEFAULT 0")
   }
 })();
 
+// Corrección puntual: alumno seed_0162 cargado con nombre incorrecto en el dataset sintético.
+(function fixNombreAlumnoSeed0162() {
+  try {
+    const result = db
+      .prepare(
+        `UPDATE users SET nombre_completo = 'Julián Francisco Barbieri'
+         WHERE username = 'seed_0162' AND nombre_completo = 'Cristian Miranda'`,
+      )
+      .run();
+    if (result.changes > 0) {
+      console.log("✅ Corrección nombre alumno seed_0162 aplicada.");
+    }
+  } catch (error) {
+    console.warn("⚠️ No se pudo corregir nombre de seed_0162:", error.message);
+  }
+})();
+
 module.exports = db;
