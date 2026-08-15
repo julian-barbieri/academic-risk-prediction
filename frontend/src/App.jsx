@@ -1,7 +1,9 @@
+import { useEffect } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import PageLayout from "./components/PageLayout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { useAuth } from "./context/AuthContext";
+import api from "./api/axios";
 import AuthCallback from "./pages/AuthCallback";
 import Dashboard from "./pages/Dashboard";
 import PanelPredicciones from "./pages/PanelPredicciones";
@@ -32,6 +34,10 @@ function DashboardRoute() {
 }
 
 export default function App() {
+  useEffect(() => {
+    api.get("/api/warmup").catch(() => {});
+  }, []);
+
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
