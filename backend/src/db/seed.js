@@ -3869,12 +3869,6 @@ async function seedUsers() {
       nombre_completo: "Docente Primero",
     },
     {
-      username: "docente1",
-      password: "docente123",
-      role: "docente",
-      nombre_completo: "Juan Perez",
-    },
-    {
       username: "coordinador",
       password: "coord123",
       role: "coordinador",
@@ -3933,6 +3927,67 @@ async function seedUsers() {
   //ensureMinAlumnosPorMateria();
 }
 
+function eliminarDocenteObsoleto(username) {
+  const user = db
+    .prepare("SELECT id FROM users WHERE username = ? AND role = 'docente'")
+    .get(username);
+
+  if (!user) {
+    return;
+  }
+
+  const eliminar = db.transaction((docenteId) => {
+    const conversacionIds = db
+      .prepare(
+        `SELECT id FROM conversaciones
+         WHERE tutor_id = ? OR participante_a_id = ? OR participante_b_id = ?`,
+      )
+      .all(docenteId, docenteId, docenteId)
+      .map((row) => row.id);
+
+    if (conversacionIds.length > 0) {
+      const ph = conversacionIds.map(() => "?").join(",");
+      db.prepare(`DELETE FROM mensajes WHERE conversacion_id IN (${ph})`).run(
+        ...conversacionIds,
+      );
+    }
+    db.prepare("DELETE FROM mensajes WHERE remitente_id = ?").run(docenteId);
+    db.prepare(
+      `DELETE FROM conversaciones
+       WHERE tutor_id = ? OR participante_a_id = ? OR participante_b_id = ?`,
+    ).run(docenteId, docenteId, docenteId);
+
+    const contenidoIds = db
+      .prepare("SELECT id FROM contenido WHERE tutor_id = ?")
+      .all(docenteId)
+      .map((row) => row.id);
+
+    if (contenidoIds.length > 0) {
+      const ph = contenidoIds.map(() => "?").join(",");
+      db.prepare(
+        `DELETE FROM visualizaciones WHERE contenido_id IN (${ph})`,
+      ).run(...contenidoIds);
+    }
+    db.prepare("DELETE FROM contenido WHERE tutor_id = ?").run(docenteId);
+    db.prepare("DELETE FROM carpetas WHERE creado_por = ?").run(docenteId);
+
+    db.prepare(
+      "DELETE FROM docente_materia WHERE docente_id = ? OR asignado_por = ?",
+    ).run(docenteId, docenteId);
+    db.prepare("DELETE FROM importaciones_log WHERE docente_id = ?").run(
+      docenteId,
+    );
+    db.prepare("DELETE FROM predictions_log WHERE user_id = ?").run(
+      docenteId,
+    );
+
+    db.prepare("DELETE FROM users WHERE id = ?").run(docenteId);
+  });
+
+  eliminar(user.id);
+  console.log(`Docente obsoleto eliminado: ${username} (id ${user.id}).`);
+}
+
 if (require.main === module) {
   seedUsers().catch((error) => {
     console.error("Error al ejecutar seed:", error);
@@ -3940,4 +3995,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { seedUsers };
+module.exports = { seedUsers, eliminarDocenteObsoleto };

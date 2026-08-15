@@ -7,7 +7,7 @@ const session = require("express-session");
 dotenv.config();
 
 require("./db/database");
-const { seedUsers } = require("./db/seed");
+const { seedUsers, eliminarDocenteObsoleto } = require("./db/seed");
 const { passport, configurePassport } = require("./config/passport");
 
 const authRoutes = require("./routes/auth.routes");
@@ -97,7 +97,9 @@ app.use("/api/sugerencias", sugerenciasRoutes);
 
 app.listen(PORT, () => {
   console.log(`Backend running on http://localhost:${PORT}`);
-  seedUsers().catch((error) => {
-    console.error("Error during seed:", error);
-  });
+  seedUsers()
+    .then(() => eliminarDocenteObsoleto("docente1"))
+    .catch((error) => {
+      console.error("Error during seed:", error);
+    });
 });
