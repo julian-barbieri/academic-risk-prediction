@@ -32,7 +32,12 @@ Capturas reales del sistema corriendo contra el AI service desplegado en producc
 | Backend (API) | https://pf-backend-fgg3.onrender.com/health |
 | AI Service (predicciones) | https://pf-ai.onrender.com/health |
 
-**Para probarlo:** iniciá sesión con usuario `director` / contraseña `director123` (cuenta de demo con datos 100% sintéticos, no hay alumnos reales).
+**Para probarlo**, iniciá sesión con cualquiera de estas cuentas de demo (datos 100% sintéticos, no hay alumnos reales):
+
+| Rol | Usuario | Contraseña |
+|---|---|---|
+| Administrador/Director | `director` | `director123` |
+| Docente | `docente` | `docente123` |
 
 Los tres servicios corren en el plan free de Render, así que si nadie los usó en un rato pueden tardar ~30-50s en la primera respuesta mientras "despiertan". El frontend ya dispara un ping de warmup al AI service al cargar para mitigar esto.
 
