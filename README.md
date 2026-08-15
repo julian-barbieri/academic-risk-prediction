@@ -1,235 +1,159 @@
-# 📚 Sistema de Predicción Académica
+# Predicciones Académicas
 
-## 🎯 ¿De qué trata este proyecto?
+[![tests](https://github.com/julian-barbieri/academic-risk-prediction/actions/workflows/tests.yml/badge.svg)](https://github.com/julian-barbieri/academic-risk-prediction/actions/workflows/tests.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Demo en vivo](https://img.shields.io/badge/demo-en%20vivo-brightgreen)](https://pf-frontend-1cdz.onrender.com)
 
-Este es un **sistema inteligente de predicción académica** que utiliza Inteligencia Artificial y Machine Learning para predecir el desempeño de estudiantes universitarios.
+Plataforma de gestión académica (notas, inscripciones, roles, mensajería) con una capa de Machine Learning que predice **abandono de carrera**, **recursada de materias** y **nota de examen** — con explicabilidad de cada predicción y sugerencias generadas con IA.
 
-El sistema puede predecir:
-
-- 🚀 **Abandono de carrera**: Si un estudiante tiene riesgo de abandonar sus estudios
-- 📖 **Recursado de materia**: Si un estudiante probablemente deba repetir una asignatura
-- 📊 **Nota de examen**: La calificación estimada que obtendrá en un examen
+Full-stack: React + Express + un microservicio de ML en Python, los tres desplegados de forma independiente.
 
 ---
 
-## 🏗️ ¿Cómo está organizado el proyecto?
+## Capturas
 
-El proyecto está dividido en **3 componentes principales**:
+| Dashboard | Panel de predicciones |
+|---|---|
+| ![Dashboard](docs/assets/screenshots/dashboard.png) | ![Panel de predicciones](docs/assets/screenshots/panel-predicciones.png) |
 
-```
-proyecto-final/
-├── frontend/          → Aplicación web (donde los usuarios interactúan)
-├── backend/           → Servidor API (procesa las solicitudes)
-└── ai-service/        → Modelos de IA (hace las predicciones)
-```
+| Predicción explicada por alumno | Sugerencias generadas con Gemini |
+|---|---|
+| ![Detalle del alumno](docs/assets/screenshots/detalle-alumno.png) | ![Sugerencias con IA](docs/assets/screenshots/sugerencias-ia.png) |
 
-### **Frontend** 🖥️
-
-- Interfaz web moderna y fácil de usar
-- Construido con React + Vite + Tailwind CSS
-- Los usuarios pueden autenticarse e ingresar datos de estudiantes
-
-### **Backend** 🔧
-
-- Servidor Express.js que actúa como intermediario
-- Maneja autenticación de usuarios
-- Almacena historial de predicciones en una base de datos SQLite
-- Proporciona API REST para comunicarse con el frontend
-
-### **AI Service** 🤖
-
-- Aplicación Streamlit con modelos de Machine Learning
-- 3 modelos entrenados para diferentes predicciones
-- Proporciona explicabilidad con gráficos SHAP
+Capturas reales del sistema corriendo contra el AI service desplegado en producción, con datos sintéticos.
 
 ---
 
-## 📋 Requisitos previos
+## Demo en vivo
 
-Antes de ejecutar el proyecto, necesitas tener instalado:
+| Servicio | URL |
+|---|---|
+| Frontend | https://pf-frontend-1cdz.onrender.com |
+| Backend (API) | https://pf-backend-fgg3.onrender.com/health |
+| AI Service (predicciones) | https://pf-ai.onrender.com/health |
 
-- **Python 3.8 o superior** ([Descargar](https://www.python.org/))
-- **Node.js 14 o superior** ([Descargar](https://nodejs.org/))
-- **npm** (viene incluido con Node.js)
-- **Git** (opcional, para clonar el proyecto)
+**Para probarlo:** iniciá sesión con usuario `director` / contraseña `director123` (cuenta de demo con datos 100% sintéticos, no hay alumnos reales).
 
-Puedes verificar si los tienes instalados ejecutando en terminal:
+Los tres servicios corren en el plan free de Render, así que si nadie los usó en un rato pueden tardar ~30-50s en la primera respuesta mientras "despiertan". El frontend ya dispara un ping de warmup al AI service al cargar para mitigar esto.
+
+---
+
+## Qué hace
+
+### Gestión académica
+- Roles diferenciados (administrador, coordinador, docente, alumno), cada uno con su propia vista y permisos
+- Gestión de materias, notas, inscripciones y cursadas
+- Mensajería interna entre docentes y alumnos
+- Autenticación con Google OAuth (dominio institucional) o usuario/contraseña local
+
+### Capa de IA
+- **3 modelos** de scikit-learn (GradientBoosting) entrenados para: riesgo de abandono, riesgo de recursada y nota estimada de examen
+- **Explicabilidad con SHAP**: cada predicción muestra qué variables la explican y en qué dirección, no es una caja negra
+- **Sugerencias accionables generadas con Gemini** a partir de la predicción y el contexto del alumno (ver captura arriba)
+- API de predicciones desacoplada (FastAPI), consumida por el backend vía HTTP — se puede reemplazar o escalar sin tocar el resto del sistema
+
+---
+
+## Resultados de los modelos
+
+Métricas calculadas evaluando los modelos entrenados contra sus datasets de test (no vistos durante el entrenamiento):
+
+| Modelo | Tipo | n (test) | Métricas |
+|---|---|---|---|
+| Abandono de carrera | Clasificación binaria | 200 | ROC-AUC **0.916** · F1 **0.83** · Accuracy 81.5% |
+| Recursada de materia | Clasificación binaria | 6.900 | ROC-AUC **0.908** · F1 **0.79** · Accuracy 88.1% |
+| Nota de examen | Regresión (escala 0-10) | 15.740 | R² **0.512** · MAE **1.25** |
+
+---
+
+## Explicabilidad (SHAP)
+
+Cada predicción de riesgo se puede descomponer en el aporte de cada variable, para que la explicación no sea "el modelo dice que sí" sino "estos son los factores y su peso":
+
+| Importancia global (materia) | Distribución de aportes (alumno) |
+|---|---|
+| ![SHAP summary](docs/assets/shap/materia_1_summary_bar.png) | ![SHAP beeswarm](docs/assets/shap/alumno_2_beeswarm.png) |
+
+---
+
+## Arquitectura
+
+```mermaid
+flowchart LR
+    U["Usuario<br/>admin / docente / alumno"] -->|HTTPS| FE["Frontend<br/>React + Vite + Tailwind"]
+    FE -->|REST /api/*| BE["Backend<br/>Express + SQLite"]
+    BE -->|POST /predict/*| AI["AI Service<br/>FastAPI + scikit-learn"]
+    BE -->|sugerencias| GEM["Gemini API"]
+    AI --- M[("3 modelos GradientBoosting (.pkl)")]
+```
+
+Los tres servicios se despliegan por separado en Render (frontend estático, backend Node, AI service como contenedor Docker). El dashboard Streamlit con los gráficos SHAP (`ai-service/app/streamlit_app.py`) es una herramienta de análisis exploratorio que corre local — no está expuesta en producción, ahí solo se sirve la API de predicciones.
+
+---
+
+## Stack tecnológico
+
+- **Frontend**: React, Vite, Tailwind CSS, React Router
+- **Backend**: Express.js, better-sqlite3, Passport.js (Google OAuth + local), Google Gemini API
+- **AI Service**: Python, FastAPI, scikit-learn, SHAP, Streamlit (exploración local)
+- **CI/CD**: GitHub Actions (jest + pytest en cada push), Docker, Render
+
+---
+
+## Cómo correrlo local
+
+Requiere Python 3.12, Node 18+ y npm.
 
 ```bash
-python --version
-node --version
-npm --version
-```
-
----
-
-## 🚀 ¿Cómo ejecutar el proyecto?
-
-### **Paso 1: Preparar el entorno backend**
-
-Abre una terminal en la carpeta `backend/` y ejecuta:
-
-```bash
+# Backend — http://localhost:3001
 cd backend
-
-# Instalar dependencias
 npm install
-
-# Ejecutar el servidor
 npm start
-```
 
-El backend estará disponible en: `http://localhost:3001`
-
----
-
-### **Paso 2: Preparar el entorno frontend**
-
-Abre una **nueva terminal** en la carpeta `frontend/` y ejecuta:
-
-```bash
+# Frontend — http://localhost:5173
 cd frontend
-
-# Instalar dependencias
 npm install
-
-# Ejecutar la aplicación web
 npm run dev
-```
 
-El frontend estará disponible en: `http://localhost:5173`
-
----
-
-### **Paso 3: Configurar el entorno AI Service**
-
-Abre una **tercera terminal** en la carpeta `ai-service/` y ejecuta:
-
-```bash
+# AI Service — http://localhost:8000
 cd ai-service
-
-# Crear un entorno virtual de Python
-python -m venv venv
-
-# Activar el entorno virtual
-# En Windows:
-./.venv/Scripts/Activate.ps1
-
-# En Mac/Linux:
-source venv/bin/activate
-
-# Instalar dependencias
+python -m venv .venv
+./.venv/Scripts/Activate.ps1   # Windows; en Mac/Linux: source .venv/bin/activate
 pip install -r requirements.txt
-
-# Ejecutar la aplicación Streamlit
-streamlit run app/streamlit_app.py
+uvicorn src.model_deploy:app --reload
 ```
 
-La aplicación Streamlit estará disponible en: `http://localhost:8501`
+Variables de entorno: copiá `backend/.env.example` a `backend/.env` y completá los secrets (Google OAuth, Gemini API key). Sin esas keys, el login con usuario/contraseña local y las predicciones funcionan igual; lo que no anda es el login con Google y las sugerencias con Gemini.
 
----
-
-## ✅ Verificar que todo funciona
-
-Cuando todo esté en marcha, deberías ver:
-
-| Servicio   | URL                            | Estado                    |
-| ---------- | ------------------------------ | ------------------------- |
-| Frontend   | `http://localhost:5173`        | Aplicación web cargada    |
-| Backend    | `http://localhost:3001/health` | `{ "status": "ok" }`      |
-| AI Service | `http://localhost:8501`        | Dashboard de predicciones |
-
----
-
-## 📁 Estructura del proyecto en detalle
+### Estructura del proyecto
 
 ```
 proyecto-final/
-│
-├── frontend/                    # Aplicación web (React)
-│   ├── src/
-│   │   ├── components/          # Componentes React
-│   │   ├── pages/               # Páginas principales
-│   │   ├── context/             # Autenticación
-│   │   └── api/                 # Llamadas al backend
-│   ├── package.json
-│   └── vite.config.js
-│
-├── backend/                     # Servidor API (Express.js)
-│   ├── src/
-│   │   ├── app.js               # Archivo principal del servidor
-│   │   ├── routes/              # Rutas de la API
-│   │   ├── db/                  # Base de datos SQLite
-│   │   ├── config/              # Configuración (autenticación)
-│   │   └── middleware/          # Middleware personalizado
-│   ├── package.json
-│   └── .env                     # Variables de entorno
-│
-└── ai-service/                  # Modelos de IA (Streamlit + ML)
-    ├── app/
-    │   └── streamlit_app.py     # Aplicación Streamlit
-    ├── src/
-    │   ├── model_explainability.py       # Explicabilidad SHAP
-    │   ├── model_deploy.py               # Despliegue
-    │   └── models/training/              # Entrenamiento de modelos
-    ├── data/                    # Datos para entrenar modelos
-    ├── models/                  # Modelos entrenados (.pkl)
-    ├── requirements.txt         # Dependencias Python
-    └── Dockerfile              # Para ejecutar en Docker
-
+├── frontend/          # React + Vite — interfaz de usuario
+├── backend/           # Express + SQLite — API, auth, orquestación
+├── ai-service/         # FastAPI + scikit-learn — modelos y predicciones
+└── docs/              # specs, planes de implementación, assets
 ```
 
 ---
 
-## 🛠️ Tecnologías utilizadas
+## Testing y CI
 
-- **Frontend**: React, Vite, Tailwind CSS
-- **Backend**: Express.js, SQLite, Passport.js
-- **AI**: Python, Streamlit, Scikit-learn, SHAP
-- **Autenticación**: Passport.js con sesiones
+66 tests corriendo en cada push a `main` vía GitHub Actions ([`.github/workflows/tests.yml`](.github/workflows/tests.yml)):
 
----
-
-## 🔧 Solución de problemas
-
-### El frontend no puede conectar con el backend
-
-- Asegúrate de que el backend esté ejecutándose en `http://localhost:3001`
-- Verifica las variables de entorno en `backend/.env`
-
-### Error al instalar dependencias Python
-
-- Asegúrate de tener Python 3.8+ instalado
-- Usa un entorno virtual: `python -m venv venv`
-
-### Puerto reservado
-
-Si un puerto ya está en uso, puedes cambiar el puerto en:
-
-- **Frontend**: Edita `frontend/vite.config.js`
-- **Backend**: Edita la variable `PORT` en `backend/.env`
-- **Streamlit**: Usa `streamlit run app/streamlit_app.py --server.port 8502`
+```bash
+cd backend && npm test        # 46 tests (jest)
+cd ai-service && pytest tests/  # 20 tests (pytest)
+```
 
 ---
 
-## 📖 Flujo de uso
+## Sobre los datos
 
-1. **Abre el navegador** en `http://localhost:5173` (frontend)
-2. **Inicia sesión** con tu usuario
-3. **Ingresa datos del estudiante** (historial académico, etc.)
-4. **Recibe predicciones** del sistema de IA
-5. **Visualiza explicaciones** de por qué el modelo hizo esa predicción
+Todos los alumnos, notas e historiales académicos usados para entrenar los modelos y poblar la demo son **sintéticos**, generados con un script propio (`backend/src/db/seed.js`). No hay datos reales de estudiantes en ningún punto del sistema.
 
 ---
 
-## 📞 Contacto
+## Licencia
 
-Si tienes dudas sobre cómo ejecutar este proyecto, verifica que:
-
-- ✅ Todos los requisitos estén instalados
-- ✅ Estés ejecutando los comandos en las carpetas correctas
-- ✅ Los puertos estén disponibles (5173, 3001, 8501)
-
----
-
-**¡Listo! Ya puedes usar el sistema de predicción académica.** 🎉
+[MIT](LICENSE) © Julián Barbieri
