@@ -354,10 +354,15 @@ async function precalcularPrediccionesCompletas(alumnosIds, materiaId) {
       procesarModeloExamen(examenBatch, examenInfoMap, results),
     ]);
 
-    // Guardar en caché los resultados nuevos (B)
+    // Guardar en caché solo resultados sin errores (B) — un fallo transitorio
+    // del AI service no debe quedar "pegado" por CACHE_TTL_MS para el resto
+    // de los alumnos que consulten esta materia mientras tanto.
     for (const alumnoId of alumnosAComputar) {
-      if (results[alumnoId]) {
-        setCachedPrediction(alumnoId, materiaId, results[alumnoId]);
+      const result = results[alumnoId];
+      const tieneError =
+        result?.abandono?.error || result?.recursado?.error || result?.nota?.error;
+      if (result && !tieneError) {
+        setCachedPrediction(alumnoId, materiaId, result);
       }
     }
   } catch (error) {
