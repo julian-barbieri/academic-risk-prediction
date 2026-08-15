@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Demo en vivo](https://img.shields.io/badge/demo-en%20vivo-brightgreen)](https://pf-frontend-1cdz.onrender.com)
 
-Plataforma de gestión académica (notas, inscripciones, roles, mensajería) con una capa de Machine Learning que predice **abandono de carrera**, **recursada de materias** y **nota de examen** — con explicabilidad de cada predicción y sugerencias generadas con IA.
+Plataforma de gestión académica (notas, inscripciones, roles) con una capa de Machine Learning que predice **abandono de carrera**, **recursada de materias** y **nota de examen** — con explicabilidad de cada predicción y sugerencias generadas con IA.
 
 Full-stack: React + Express + un microservicio de ML en Python, los tres desplegados de forma independiente.
 
