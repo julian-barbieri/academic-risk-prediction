@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Sparkles } from "lucide-react";
+import { GraduationCap, Search, Sparkles } from "lucide-react";
 import api from "../api/axios";
+import EmptyState from "../components/EmptyState";
 import LoadingSpinner from "../components/LoadingSpinner";
 import ModalSugerencia from "../components/ModalSugerencia";
 import { useAuth } from "../context/AuthContext";
@@ -626,6 +627,14 @@ export default function PanelPredicciones() {
 
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>
+      )}
+
+      {!loading && !error && materias.length === 0 && user?.role === "docente" && (
+        <EmptyState
+          icon={<GraduationCap />}
+          title="Todavía no tenés materias asignadas"
+          description='Esperá a que el Administrador/Director te asigne una materia desde el panel de "Gestión de materias".'
+        />
       )}
 
       {/* Selector de materia + búsqueda */}

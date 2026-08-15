@@ -57,8 +57,8 @@ export default function MisMateriasDocente() {
             {activas.length === 0 ? (
               <EmptyState
                 icon={<Inbox />}
-                title="No tenés materias asignadas actualmente."
-                description="Contactá al coordinador para revisar tu asignación docente."
+                title="Todavía no tenés materias asignadas"
+                description='Esperá a que el Administrador/Director te asigne una materia desde el panel de "Gestión de materias".'
               />
             ) : (
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
