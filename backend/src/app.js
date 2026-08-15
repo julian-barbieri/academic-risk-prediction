@@ -22,6 +22,7 @@ const dashboardRoutes = require("./routes/dashboard.routes");
 const notasRoutes = require("./routes/notas.routes");
 const sugerenciasRoutes = require("./routes/sugerencias.routes");
 const { authenticate, authorize } = require("./middleware/auth.middleware");
+const { pingAiService } = require("./services/warmup.service");
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -60,6 +61,11 @@ app.use("/uploads", express.static(resolvedUploadsPath));
 
 app.get("/health", (req, res) => {
   res.json({ status: "ok", service: "backend" });
+});
+
+app.get("/api/warmup", (req, res) => {
+  pingAiService();
+  res.status(202).json({ status: "warming" });
 });
 
 app.use("/api/auth", authRoutes);
