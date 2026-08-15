@@ -43,7 +43,6 @@ Los tres servicios corren en el plan free de Render, así que si nadie los usó 
 ### Gestión académica
 - Roles diferenciados (administrador, coordinador, docente, alumno), cada uno con su propia vista y permisos
 - Gestión de materias, notas, inscripciones y cursadas
-- Mensajería interna entre docentes y alumnos
 - Autenticación con Google OAuth (dominio institucional) o usuario/contraseña local
 
 ### Capa de IA
