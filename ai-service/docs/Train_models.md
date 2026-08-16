@@ -46,11 +46,18 @@ PARAM_DIST = {
 
 Cada corrida se loguea localmente en `ai-service/mlruns/` (no versionado en git — regenerable corriendo el script). Un experimento por modelo: `modelo_alumno`, `modelo_materia`, `modelo_examen`.
 
-Para inspeccionar las corridas:
+Para inspeccionar las corridas (MLflow 3.x requiere `MLFLOW_ALLOW_FILE_STORE`):
 
+**bash:**
 ```bash
 cd ai-service
-mlflow ui --backend-store-uri file:./mlruns
+MLFLOW_ALLOW_FILE_STORE=true mlflow ui --backend-store-uri file:./mlruns
+```
+
+**PowerShell:**
+```powershell
+cd ai-service
+$env:MLFLOW_ALLOW_FILE_STORE="true"; mlflow ui --backend-store-uri file:./mlruns
 ```
 
 ## Resultados (última corrida)
