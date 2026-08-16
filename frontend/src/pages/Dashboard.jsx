@@ -8,8 +8,12 @@ import GraficoHistoricoMateria from "../components/dashboard/GraficoHistoricoMat
 import {
   Users, BookOpen, RotateCcw, ClipboardList, AlertTriangle,
   TrendingUp, Clock,
-  BarChart3, Activity, PieChart, GraduationCap,
+  BarChart3, Activity, PieChart, GraduationCap, Loader2,
 } from "lucide-react";
+
+// Reintentos en segundo plano mientras el ai-service (Render free tier)
+// termina su cold start (~30-60s). Suman ~60s de espera total.
+const AI_RETRY_DELAYS_MS = [5000, 8000, 12000, 15000, 20000];
 
 function SkeletonLoader() {
   return (
@@ -56,6 +60,7 @@ export default function Dashboard() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [aiRetryCount, setAiRetryCount] = useState(0);
 
   // Estados para la tab de rendimiento por examen
   const [anioSeleccionado, setAnioSeleccionado] = useState(
@@ -91,6 +96,27 @@ export default function Dashboard() {
 
     cargarDashboard();
   }, []);
+
+  // Si el servicio de IA todavía no respondió (cold start en Render),
+  // reintentar en segundo plano sin bloquear el resto del dashboard.
+  useEffect(() => {
+    if (!data || data.ai_disponible || aiRetryCount >= AI_RETRY_DELAYS_MS.length) {
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        const response = await api.get("/api/dashboard");
+        setData(response.data);
+      } catch (err) {
+        console.error("Error reintentando dashboard (IA):", err);
+      } finally {
+        setAiRetryCount((c) => c + 1);
+      }
+    }, AI_RETRY_DELAYS_MS[aiRetryCount]);
+
+    return () => clearTimeout(timer);
+  }, [data, aiRetryCount]);
 
   // Cargar datos de rendimiento por materia cuando cambia la tab o el año
   useEffect(() => {
@@ -194,11 +220,19 @@ export default function Dashboard() {
     <div className="space-y-6">
       <div>
         {!ai_disponible && data && (
-          <div className="mt-3 flex items-center gap-2 px-4 py-2 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
-            <AlertTriangle className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
-            El servicio de predicciones ML no está disponible. Se muestran
-            solo datos académicos.
-          </div>
+          aiRetryCount < AI_RETRY_DELAYS_MS.length ? (
+            <div className="mt-3 flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
+              <Loader2 className="w-4 h-4 flex-shrink-0 animate-spin" aria-hidden="true" />
+              Calentando el servicio de predicciones IA... puede tardar hasta
+              un minuto la primera vez.
+            </div>
+          ) : (
+            <div className="mt-3 flex items-center gap-2 px-4 py-2 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+              <AlertTriangle className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
+              El servicio de predicciones ML no está disponible. Se muestran
+              solo datos académicos.
+            </div>
+          )
         )}
       </div>
 
