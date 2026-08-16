@@ -185,6 +185,9 @@ ai-service/models/dataset-test/
 ai-service/outputs/shap/*.csv
 ai-service/outputs/
 
+# MLflow tracking (regenerable con python src/train_models.py)
+ai-service/mlruns/
+
 # Datasets generados (CSV grandes)
 *.csv
 ai-service/data/*.csv
