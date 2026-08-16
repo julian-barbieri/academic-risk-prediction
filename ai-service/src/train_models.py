@@ -19,7 +19,9 @@ warnings.filterwarnings("ignore")
 import joblib
 import numpy as np
 import pandas as pd
+from scipy.stats import randint, uniform, loguniform
 from sklearn.ensemble import GradientBoostingClassifier, GradientBoostingRegressor
+from sklearn.model_selection import RandomizedSearchCV, StratifiedKFold, KFold
 from sklearn.utils.class_weight import compute_sample_weight
 from sklearn.metrics import (
     classification_report, roc_auc_score,
@@ -37,6 +39,33 @@ TEST_DIR        = os.path.join(SRC_DIR, "models", "dataset-test")
 
 os.makedirs(MODELS_DIR, exist_ok=True)
 os.makedirs(TEST_DIR,   exist_ok=True)
+
+PARAM_DIST = {
+    "n_estimators": randint(100, 400),
+    "max_depth": randint(2, 6),
+    "learning_rate": loguniform(0.01, 0.2),
+    "subsample": uniform(0.6, 0.4),          # rango efectivo [0.6, 1.0]
+    "min_samples_leaf": randint(1, 50),
+    "max_features": ["sqrt", "log2", None],
+}
+N_ITER = 25
+CV_FOLDS = 5
+
+
+def _run_search(estimator, X_train, y_train, cv, scoring, fit_params=None):
+    """Corre RandomizedSearchCV sobre PARAM_DIST y devuelve el search fiteado."""
+    search = RandomizedSearchCV(
+        estimator,
+        param_distributions=PARAM_DIST,
+        n_iter=N_ITER,
+        cv=cv,
+        scoring=scoring,
+        n_jobs=-1,
+        random_state=42,
+        refit=True,
+    )
+    search.fit(X_train, y_train, **(fit_params or {}))
+    return search
 
 
 def entrenar_clasificador(dataset: str):
