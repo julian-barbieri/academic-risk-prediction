@@ -17,6 +17,8 @@ import warnings
 warnings.filterwarnings("ignore")
 
 import joblib
+import mlflow
+import mlflow.sklearn
 import numpy as np
 import pandas as pd
 from scipy.stats import randint, uniform, loguniform
@@ -36,9 +38,15 @@ from feature_engineering import ft_engineering_procesado
 
 MODELS_DIR      = os.path.join(SRC_DIR, "models", "models-trained")
 TEST_DIR        = os.path.join(SRC_DIR, "models", "dataset-test")
+MLRUNS_DIR      = os.path.join(SRC_DIR, "..", "mlruns")
 
 os.makedirs(MODELS_DIR, exist_ok=True)
 os.makedirs(TEST_DIR,   exist_ok=True)
+
+# mlflow >=3.x pone el FileStore local en "maintenance mode" y exige este
+# opt-in explicito para seguir usando './mlruns' como backend de tracking.
+os.environ.setdefault("MLFLOW_ALLOW_FILE_STORE", "true")
+mlflow.set_tracking_uri(f"file:{MLRUNS_DIR}")
 
 PARAM_DIST = {
     "n_estimators": randint(100, 400),
@@ -66,6 +74,21 @@ def _run_search(estimator, X_train, y_train, cv, scoring, fit_params=None):
     )
     search.fit(X_train, y_train, **(fit_params or {}))
     return search
+
+
+def _log_run(dataset, search, metrics, report_text=None):
+    """Loguea una corrida de busqueda de hiperparametros en MLflow."""
+    mlflow.set_experiment(f"modelo_{dataset}")
+    with mlflow.start_run():
+        mlflow.log_params(search.best_params_)
+        mlflow.log_param("cv_folds", CV_FOLDS)
+        mlflow.log_param("n_iter", N_ITER)
+        mlflow.log_metric("cv_best_score", search.best_score_)
+        for name, value in metrics.items():
+            mlflow.log_metric(name, value)
+        mlflow.sklearn.log_model(search.best_estimator_, name="model")
+        if report_text:
+            mlflow.log_text(report_text, "classification_report.txt")
 
 
 def entrenar_clasificador(dataset: str):
