@@ -52,6 +52,7 @@ Los tres servicios corren en el plan free de Render, así que si nadie los usó 
 
 ### Capa de IA
 - **3 modelos** de scikit-learn (GradientBoosting) entrenados para: riesgo de abandono, riesgo de recursada y nota estimada de examen
+- **Hiperparámetros ajustados con RandomizedSearchCV** (5-fold cross-validation) y tracking de cada corrida con **MLflow**
 - **Explicabilidad con SHAP**: cada predicción muestra qué variables la explican y en qué dirección, no es una caja negra
 - **Sugerencias accionables generadas con Gemini** a partir de la predicción y el contexto del alumno (ver captura arriba)
 - API de predicciones desacoplada (FastAPI), consumida por el backend vía HTTP — se puede reemplazar o escalar sin tocar el resto del sistema
@@ -64,9 +65,9 @@ Métricas calculadas evaluando los modelos entrenados contra sus datasets de tes
 
 | Modelo | Tipo | n (test) | Métricas |
 |---|---|---|---|
-| Abandono de carrera | Clasificación binaria | 200 | ROC-AUC **0.916** · F1 **0.83** · Accuracy 81.5% |
-| Recursada de materia | Clasificación binaria | 6.900 | ROC-AUC **0.908** · F1 **0.79** · Accuracy 88.1% |
-| Nota de examen | Regresión (escala 0-10) | 15.740 | R² **0.512** · MAE **1.25** |
+| Abandono de carrera | Clasificación binaria | 200 | ROC-AUC **0.919** · F1 **0.84** · Accuracy 82.5% |
+| Recursada de materia | Clasificación binaria | 6.900 | ROC-AUC **0.911** · F1 **0.78** · Accuracy 88.0% |
+| Nota de examen | Regresión (escala 0-10) | 15.740 | R² **0.522** · MAE **1.23** |
 
 ---
 
@@ -99,7 +100,7 @@ Los tres servicios se despliegan por separado en Render (frontend estático, bac
 
 - **Frontend**: React, Vite, Tailwind CSS, React Router
 - **Backend**: Express.js, better-sqlite3, Passport.js (Google OAuth + local), Google Gemini API
-- **AI Service**: Python, FastAPI, scikit-learn, SHAP, Streamlit (exploración local)
+- **AI Service**: Python, FastAPI, scikit-learn, SHAP, MLflow, Streamlit (exploración local)
 - **CI/CD**: GitHub Actions (jest + pytest en cada push), Docker, Render
 
 ---
