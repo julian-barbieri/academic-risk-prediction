@@ -150,20 +150,24 @@ def entrenar_regresor(dataset: str):
 
     X_train, X_test, y_train, y_test = ft_engineering_procesado(dataset)
 
-    reg = GradientBoostingRegressor(
-        n_estimators=200,
-        max_depth=4,
-        learning_rate=0.05,
-        subsample=0.8,
-        random_state=42,
+    cv = KFold(n_splits=CV_FOLDS, shuffle=True, random_state=42)
+    search = _run_search(
+        GradientBoostingRegressor(random_state=42),
+        X_train, y_train,
+        cv=cv,
+        scoring="r2",
     )
-    reg.fit(X_train, y_train)
+    reg = search.best_estimator_
 
     y_pred = reg.predict(X_test)
+    test_mae = mean_absolute_error(y_test, y_pred)
+    test_r2 = r2_score(y_test, y_pred)
 
+    print(f"\n  Mejores hiperparametros: {search.best_params_}")
+    print(f"  CV R2 (best): {search.best_score_:.4f}")
     print(f"\n  Metricas en test:")
-    print(f"  MAE  : {mean_absolute_error(y_test, y_pred):.4f}")
-    print(f"  R2   : {r2_score(y_test, y_pred):.4f}")
+    print(f"  MAE  : {test_mae:.4f}")
+    print(f"  R2   : {test_r2:.4f}")
 
     model_path = os.path.join(MODELS_DIR, f"modelo_{dataset}.pkl")
     joblib.dump(reg, model_path)
@@ -172,6 +176,8 @@ def entrenar_regresor(dataset: str):
     pd.DataFrame(X_test).to_csv(os.path.join(TEST_DIR, f"X_test_{dataset}.csv"), index=False)
     pd.Series(y_test, name=y_test.name).to_csv(os.path.join(TEST_DIR, f"y_test_{dataset}.csv"), index=False)
     print(f"  Test set guardado en {TEST_DIR}")
+
+    _log_run(dataset, search, {"test_mae": test_mae, "test_r2": test_r2})
 
 
 if __name__ == "__main__":
