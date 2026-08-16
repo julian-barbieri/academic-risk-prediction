@@ -26,7 +26,7 @@ from sklearn.ensemble import GradientBoostingClassifier, GradientBoostingRegress
 from sklearn.model_selection import RandomizedSearchCV, StratifiedKFold, KFold
 from sklearn.utils.class_weight import compute_sample_weight
 from sklearn.metrics import (
-    classification_report, roc_auc_score,
+    classification_report, roc_auc_score, accuracy_score, f1_score,
     mean_absolute_error, r2_score,
 )
 
@@ -101,22 +101,28 @@ def entrenar_clasificador(dataset: str):
     # Compensar desbalance de clases con sample_weight
     sample_weights = compute_sample_weight("balanced", y_train)
 
-    clf = GradientBoostingClassifier(
-        n_estimators=200,
-        max_depth=4,
-        learning_rate=0.05,
-        subsample=0.8,
-        random_state=42,
+    cv = StratifiedKFold(n_splits=CV_FOLDS, shuffle=True, random_state=42)
+    search = _run_search(
+        GradientBoostingClassifier(random_state=42),
+        X_train, y_train,
+        cv=cv,
+        scoring="roc_auc",
+        fit_params={"sample_weight": sample_weights},
     )
-    clf.fit(X_train, y_train, sample_weight=sample_weights)
+    clf = search.best_estimator_
 
     y_pred = clf.predict(X_test)
     y_prob = clf.predict_proba(X_test)[:, 1]
 
+    print(f"\n  Mejores hiperparametros: {search.best_params_}")
+    print(f"  CV ROC-AUC (best): {search.best_score_:.4f}")
+    report = classification_report(y_test, y_pred, zero_division=0)
     print(f"\n  Metricas en test:")
-    print(classification_report(y_test, y_pred, zero_division=0))
+    print(report)
+    test_auc = None
     try:
-        print(f"  ROC-AUC: {roc_auc_score(y_test, y_prob):.4f}")
+        test_auc = roc_auc_score(y_test, y_prob)
+        print(f"  ROC-AUC: {test_auc:.4f}")
     except Exception:
         pass
 
@@ -127,6 +133,14 @@ def entrenar_clasificador(dataset: str):
     pd.DataFrame(X_test).to_csv(os.path.join(TEST_DIR, f"X_test_{dataset}.csv"), index=False)
     pd.Series(y_test, name=y_test.name).to_csv(os.path.join(TEST_DIR, f"y_test_{dataset}.csv"), index=False)
     print(f"  Test set guardado en {TEST_DIR}")
+
+    metrics = {
+        "test_accuracy": accuracy_score(y_test, y_pred),
+        "test_f1": f1_score(y_test, y_pred, zero_division=0),
+    }
+    if test_auc is not None:
+        metrics["test_roc_auc"] = test_auc
+    _log_run(dataset, search, metrics, report_text=report)
 
 
 def entrenar_regresor(dataset: str):
