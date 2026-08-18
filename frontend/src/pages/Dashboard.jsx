@@ -12,8 +12,10 @@ import {
 } from "lucide-react";
 
 // Reintentos en segundo plano mientras el ai-service (Render free tier)
-// termina su cold start (~30-60s). Suman ~60s de espera total.
-const AI_RETRY_DELAYS_MS = [5000, 8000, 12000, 15000, 20000];
+// termina su cold start. Cada intento (incluido el inicial) ya espera hasta
+// 60s en el backend (ver dashboard.routes.js), así que acá alcanza con pocos
+// reintentos bien espaciados en vez de muchos cortos.
+const AI_RETRY_DELAYS_MS = [5000, 45000];
 
 function SkeletonLoader() {
   return (
@@ -61,6 +63,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [aiRetryCount, setAiRetryCount] = useState(0);
+  const [reintentandoIA, setReintentandoIA] = useState(false);
 
   // Estados para la tab de rendimiento por examen
   const [anioSeleccionado, setAnioSeleccionado] = useState(
@@ -117,6 +120,21 @@ export default function Dashboard() {
 
     return () => clearTimeout(timer);
   }, [data, aiRetryCount]);
+
+  // Reintento manual: se ofrece cuando ya se agotaron los reintentos
+  // automáticos y el usuario sigue en la página.
+  const reintentarIA = async () => {
+    setReintentandoIA(true);
+    try {
+      const response = await api.get("/api/dashboard");
+      setData(response.data);
+    } catch (err) {
+      console.error("Error reintentando dashboard (IA):", err);
+    } finally {
+      setAiRetryCount(0);
+      setReintentandoIA(false);
+    }
+  };
 
   // Cargar datos de rendimiento por materia cuando cambia la tab o el año
   useEffect(() => {
@@ -229,8 +247,19 @@ export default function Dashboard() {
           ) : (
             <div className="mt-3 flex items-center gap-2 px-4 py-2 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
               <AlertTriangle className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
-              El servicio de predicciones ML no está disponible. Se muestran
-              solo datos académicos.
+              <span>
+                El servicio de predicciones ML no está disponible. Se muestran
+                solo datos académicos.
+              </span>
+              <button
+                type="button"
+                onClick={reintentarIA}
+                disabled={reintentandoIA}
+                className="ml-auto flex items-center gap-1 px-3 py-1 rounded-md border border-amber-300 bg-white text-amber-800 hover:bg-amber-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {reintentandoIA && <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />}
+                Reintentar
+              </button>
             </div>
           )
         )}

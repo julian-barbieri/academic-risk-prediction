@@ -40,10 +40,14 @@ async function obtenerPrediccionesAbandono(alumnosActivos) {
 
   // Un solo POST con todos los alumnos en lugar de N requests
   try {
+    // 60s (no 15s): en Render free tier el cold start del ai-service puede
+    // tardar "50 segundos o mas" segun el propio dashboard de Render. Con un
+    // timeout mas corto, cada intento aborta antes de que el contenedor
+    // termine de arrancar y nunca llega a responder.
     const resp = await axios.post(
       `${AI_URL}/predict/alumno`,
       validos.map((a) => a.body),
-      { timeout: 15000 },
+      { timeout: 60000 },
     );
 
     const predicciones = [
