@@ -96,6 +96,10 @@ export function AuthProvider({ children }) {
     setAuthState({ token: authToken, user: normalizedUser });
     sessionStorage.removeItem(AUTH_ERROR_KEY);
 
+    // Backend ya respondió (login exitoso), así que este pedido de warmup
+    // llega con el backend despierto y dispara el ping best-effort a pf-ai.
+    api.get("/api/warmup").catch(() => {});
+
     return normalizedUser;
   };
 
