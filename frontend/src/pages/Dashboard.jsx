@@ -13,9 +13,12 @@ import {
 
 // Reintentos en segundo plano mientras el ai-service (Render free tier)
 // termina su cold start. Cada intento (incluido el inicial) ya espera hasta
-// 60s en el backend (ver dashboard.routes.js), así que acá alcanza con pocos
-// reintentos bien espaciados en vez de muchos cortos.
-const AI_RETRY_DELAYS_MS = [5000, 45000];
+// 60s en el backend (ver dashboard.routes.js). El ai-service es un contenedor
+// Docker con Python (numpy/pandas/scikit-learn/xgboost) sobre 0.1 vCPU: el
+// import chain completo antes de poder responder /health puede tardar bastante
+// más que el cold start típico del contenedor, así que el techo total acá es
+// generoso (~4 min de delays + hasta 60s por intento cada uno).
+const AI_RETRY_DELAYS_MS = [5000, 15000, 30000, 45000, 60000, 60000];
 
 function SkeletonLoader() {
   return (
@@ -241,8 +244,8 @@ export default function Dashboard() {
           aiRetryCount < AI_RETRY_DELAYS_MS.length ? (
             <div className="mt-3 flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
               <Loader2 className="w-4 h-4 flex-shrink-0 animate-spin" aria-hidden="true" />
-              Calentando el servicio de predicciones IA... puede tardar hasta
-              un minuto la primera vez.
+              Calentando el servicio de predicciones IA... puede tardar
+              unos minutos la primera vez.
             </div>
           ) : (
             <div className="mt-3 flex items-center gap-2 px-4 py-2 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
