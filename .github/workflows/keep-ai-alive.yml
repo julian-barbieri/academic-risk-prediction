@@ -13,16 +13,15 @@ name: keep-ai-alive
 # servicios free hasta el mes siguiente.
 #
 # El cron de GitHub Actions corre en UTC. Argentina = UTC-3 (sin horario de
-# verano). Ventana deseada: lunes a viernes, 7:00-23:00 hora Argentina. Como
-# el rango cruza la medianoche UTC, se expresa en dos lineas:
-#   - horas 10-23 UTC, lunes a viernes  => 07:00-20:59 ART lunes a viernes
-#   - horas 0-2 UTC, martes a sabado    => 21:00-23:59 ART lunes a viernes
-# Uso estimado: ~16h/dia x ~22 dias habiles/mes =~ 350h/mes, bien por debajo
-# del pool compartido de 750h.
+# verano). Ventana deseada: todos los dias, 7:00-23:00 hora Argentina, que en
+# UTC es el conjunto de horas 10-23 y 0-2 (cruza la medianoche UTC, por eso
+# el campo de horas junta ambos rangos separados por coma). Al cubrir los 7
+# dias no hace falta restringir dia-de-semana.
+# Uso estimado: ~16h/dia x 30 dias =~ 480h/mes, todavia bien por debajo del
+# pool compartido de 750h (deja ~270h de margen para pf-backend y uso real).
 on:
   schedule:
-    - cron: "*/10 10-23 * * 1-5"
-    - cron: "*/10 0-2 * * 2-6"
+    - cron: "*/10 10-23,0-2 * * *"
   workflow_dispatch: {}
 
 jobs:
